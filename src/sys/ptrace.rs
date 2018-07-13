@@ -83,6 +83,7 @@ libc_enum!{
                                            target_arch = "x86_64")))]
         PTRACE_SETFPXREGS,
         PTRACE_SYSCALL,
+        PTRACE_SYSEMU,
         PTRACE_SETOPTIONS,
         PTRACE_GETEVENTMSG,
         PTRACE_GETSIGINFO,
@@ -274,6 +275,24 @@ pub fn syscall(pid: Pid) -> Result<()> {
             pid,
             ptr::null_mut(),
             ptr::null_mut(),
+        ).map(|_| ()) // ignore the useless return value
+    }
+}
+
+/// Ask for next syscall, which will not be executed, as with `ptrace(PTRACE_SYSEMU, ...)`
+///
+/// Arranges for the tracee to be stopped at the next system call, which will not be executed.
+pub fn sysemu<T: Into<Option<Signal>>>(pid: Pid, sig: T) -> Result<()> {
+    let data = match sig.into() {
+        Some(s) => s as i32 as *mut c_void,
+        None => ptr::null_mut(),
+    };
+    unsafe {
+        ptrace_other(
+            Request::PTRACE_SYSEMU,
+            pid,
+            ptr::null_mut(),
+            data
         ).map(|_| ()) // ignore the useless return value
     }
 }
